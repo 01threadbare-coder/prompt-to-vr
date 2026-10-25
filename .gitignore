@@ -1,0 +1,6 @@
+.env
+node_modules/
+public/latest.mp4
+public/latest-compatible.mp4
+public/bloodstream*.mp4
+public/uploads/
