@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f1eb">
+  <title>Immersive Learning Studio</title>
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+  <style>
+    :root {
+      --paper:#f3f1eb;--ink:#20231f;--muted:#777970;
+      --line:#d2d0c7;--green:#66877b;--white:#fffefa;--dark:#101716;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:var(--paper)}
+    body{overflow-x:hidden}
+    button,input,textarea{font:inherit}
+    button{cursor:pointer}
+    .mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;text-transform:uppercase;letter-spacing:.09em;font-size:10px}
+    .topbar{min-height:66px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:15px 3.2%;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:12px;min-width:220px}
+    .brand-mark{width:3px;height:34px;background:var(--ink)}
+    .brand-name{font-size:15px;font-weight:800;letter-spacing:.07em;line-height:1.1}
+    .beta{color:var(--muted);font-size:9px;align-self:end;margin-bottom:2px}
+    .nav{display:flex;gap:28px;align-items:center}
+    .nav a{color:var(--ink);text-decoration:none;font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+    .connection{display:flex;align-items:center;gap:9px;font-size:11px;white-space:nowrap}
+    .connection-dot{width:8px;height:8px;background:#6b9c79;border-radius:50%}
+    .teacher-layout{display:grid;grid-template-columns:minmax(310px,370px) minmax(0,1fr);min-height:660px;border-bottom:1px solid var(--line)}
+    .teacher-controls{padding:32px 28px;border-right:1px solid var(--line)}
+    .eyebrow{color:var(--muted);margin-bottom:18px}
+    h1{font-size:clamp(37px,4vw,53px);letter-spacing:-.065em;line-height:.99;font-weight:700;margin:0 0 20px}
+    .intro{color:#54574f;font-size:13px;line-height:1.65;max-width:330px;margin:0 0 28px}
+    .field-label{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:20px 0 10px;font-size:10px;font-family:"SFMono-Regular",Consolas,monospace;letter-spacing:.08em;text-transform:uppercase}
+    .field-label span:last-child{color:var(--muted);font-size:9px}
+    .upload{display:block;border:1px dashed #b9b8ae;min-height:75px;padding:17px;cursor:pointer;background:rgba(255,255,255,.25);transition:background .2s}
+    .upload:hover{background:#fffefa}
+    .upload strong{display:block;font-size:12px;font-weight:500;margin-bottom:5px}
+    .upload small{color:var(--muted);font-size:10px}
+    #document{display:none}
+    #prompt{width:100%;min-height:125px;resize:vertical;padding:15px;border:1px solid var(--line);border-radius:0;background:rgba(255,255,255,.35);color:var(--ink);outline:none;font-size:12px;line-height:1.6}
+    #prompt:focus{border-color:var(--green)}
+    #prompt::placeholder{color:#85867e}
+    .generate{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:12px;padding:16px;background:var(--ink);color:white;border:1px solid var(--ink);text-align:left;font-size:10px;letter-spacing:.09em;text-transform:uppercase}
+    .generate:hover{background:#3c4942}
+    .generate:disabled{opacity:.55;cursor:wait}
+    .generate-arrow{font-size:20px}
+    .status-panel{margin-top:18px;padding:15px;border:1px solid var(--line)}
+    .status-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+    .status-indicator{width:7px;height:7px;display:inline-block;background:var(--green);border-radius:50%;margin-right:7px}
+    #status{font-size:12px;line-height:1.5;overflow-wrap:anywhere;margin:0 0 12px}
+    .progress-track{height:2px;background:#dcdad1;overflow:hidden}
+    .progress-fill{height:100%;width:0%;background:var(--green);transition:width .5s ease}
+    .progress-fill.running{width:70%;animation:progressPulse 1.6s ease-in-out infinite alternate}
+    @keyframes progressPulse{from{opacity:.4}to{opacity:1}}
+    .status-foot{display:flex;justify-content:space-between;gap:8px;margin-top:10px;color:var(--muted);font-size:9px}
+    .visual-column{min-width:0;display:flex;flex-direction:column}
+    .visual-top{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--line);gap:12px}
+    .visual-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+    .visual-meta{color:var(--muted);text-align:right;font-size:9px;line-height:1.6}
+    .preview{position:relative;min-height:440px;flex:1;overflow:hidden;background:#172622;color:white}
+    .preview video{width:100%;height:100%;min-height:440px;position:absolute;inset:0;object-fit:cover}
+    .preview-shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.3),transparent 35%,transparent 65%,rgba(0,0,0,.5))}
+    .preview-label{position:absolute;top:22px;left:22px;padding:9px 11px;background:rgba(15,22,19,.6);border:1px solid rgba(255,255,255,.35);font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+    .preview-bottom{position:absolute;left:22px;right:22px;bottom:22px;display:flex;align-items:end;justify-content:space-between;gap:16px}
+    .preview-bottom h2{font-size:clamp(24px,3vw,42px);line-height:1;letter-spacing:-.045em;font-weight:500;margin:0 0 8px;max-width:420px}
+    .preview-bottom p{margin:0;font-size:11px;color:#e2e5df}
+    .preview-actions{display:flex;flex-wrap:wrap;gap:8px}
+    .outline-button{padding:12px 14px;border:1px solid rgba(255,255,255,.7);color:white;background:rgba(0,0,0,.2);font-size:9px;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+    .outline-button:hover{background:rgba(255,255,255,.18)}
+    .preview-index{position:absolute;top:50%;right:18px;writing-mode:vertical-rl;color:rgba(255,255,255,.7);font-size:9px;letter-spacing:.1em}
+    .student-strip{display:grid;grid-template-columns:1fr 1.3fr .7fr;min-height:200px;background:var(--dark);color:white;align-items:stretch}
+    .student-intro,.student-scene,.student-session{padding:26px;border-right:1px solid #343a35}
+    .student-intro h2{margin:20px 0 10px;font-size:clamp(24px,2.6vw,36px);font-weight:500;line-height:1.05;letter-spacing:-.04em}
+    .student-intro p{color:#b9c1ba;font-size:11px;line-height:1.6;max-width:240px}
+    .student-scene{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:end;min-height:200px;background:radial-gradient(ellipse at 60% 20%,#466b64 0%,transparent 38%),radial-gradient(ellipse at 20% 80%,#1e4946 0%,transparent 45%),#111d1c}
+    .student-scene::before{content:"";position:absolute;inset:0;opacity:.22;background-image:linear-gradient(rgba(255,255,255,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.12) 1px,transparent 1px);background-size:28px 28px}
+    .student-scene>*{position:relative}
+    .student-scene h3{margin:0 0 8px;font-size:20px;font-weight:500}
+    .student-scene p{margin:0;font-size:10px;color:#b9c1ba}
+    .student-session .mono{color:#b5c5bb}
+    .session-status{margin:20px 0;font-size:12px;line-height:1.5}
+    .student-link{color:#d5e7db;overflow-wrap:anywhere;font-size:10px;line-height:1.6}
+    .footer{display:flex;justify-content:space-between;gap:16px;padding:16px 3.2%;color:var(--muted);font-size:9px;letter-spacing:.06em;text-transform:uppercase}
+
+    /* Student/Quest view */
+    body.student-mode{background:#000;color:white;overflow:hidden}
+    body.student-mode #teacherHeader,
+    body.student-mode #teacherLayout,
+    body.student-mode #studentStrip,
+    body.student-mode #footer{display:none}
+    #studentOverlay{display:none}
+    body.student-mode #studentOverlay{display:flex}
+    #studentOverlay{position:fixed;z-index:20;left:0;right:0;bottom:0;padding:24px;background:linear-gradient(transparent,rgba(0,0,0,.85));color:white;align-items:end;justify-content:space-between;gap:20px;pointer-events:none}
+    #studentOverlay button{pointer-events:auto}
+    #studentOverlay h1{font-size:clamp(25px,4vw,40px);margin:10px 0}
+    #studentOverlay p{margin:0;color:#d1d8d2;font-size:12px}
+    #studentOverlay .student-overlay-copy{max-width:500px}
+    #studentEnter{border:0;background:#e8eee8;color:#16231d;padding:15px 18px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+    #studentOverlay.hidden{display:none!important}
+
+    #studentShortcutHints{display:none;position:fixed;z-index:30;left:18px;bottom:16px;color:rgba(255,255,255,.78);font-family:"SFMono-Regular",Consolas,monospace;font-size:11px;line-height:1.8;letter-spacing:.03em;pointer-events:none;text-shadow:0 1px 5px rgba(0,0,0,.8)}
+    body.student-mode #studentShortcutHints{display:block}
+    body.student-mode.generating #studentOverlay{display:none!important}
+    body.student-mode.generating{background:#000}
+
+    a-scene{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+    body:not(.student-mode) a-scene{visibility:hidden;pointer-events:none}
+    body.student-mode a-scene{visibility:visible;pointer-events:auto}
+
+    @media(max-width:850px){
+      .nav{display:none}
+      .teacher-layout{grid-template-columns:1fr}
+      .teacher-controls{border-right:0;border-bottom:1px solid var(--line);padding:26px 22px}
+      .preview,.preview video{min-height:360px}
+      .student-strip{grid-template-columns:1fr}
+      .student-intro,.student-scene,.student-session{border-right:0;border-bottom:1px solid #343a35}
+      .student-scene{min-height:180px}
+      .connection{font-size:10px}
+    }
+    @media(max-width:500px){
+      .topbar{padding:14px 18px}
+      .brand-name{font-size:12px}
+      .beta{display:none}
+      .visual-top{padding:14px}
+      .preview-bottom{left:14px;right:14px;bottom:14px}
+      .preview-actions{flex-direction:column}
+      .outline-button{padding:10px}
+      #studentOverlay{padding:16px}
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar" id="teacherHeader">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">IMMERSIVE<br>LEARNING STUDIO</div>
+      <div class="beta mono">BETA</div>
+    </div>
+    <nav class="nav">
+      <a href="#studio">Studio</a>
+      <a href="#preview">Preview</a>
+      <a href="#studentStrip">Student view</a>
+    </nav>
+    <div class="connection">
+      <span class="connection-dot"></span>
+      <span>Shared session<br><span style="color:var(--muted)">Laptop + Quest</span></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="teacher-layout" id="teacherLayout">
+      <aside class="teacher-controls" id="studio">
+        <div class="eyebrow mono">01 / Create a lesson</div>
+        <h1>Turn lessons<br>into immersive<br>experiences.</h1>
+        <p class="intro">Upload your material, describe what you want students to experience, and generate a 360° learning world.</p>
+
+        <form id="generateForm">
+          <div class="field-label">
+            <label for="document">Upload PDF (optional)</label>
+            <span>MAX 15 MB</span>
+          </div>
+          <label class="upload" for="document">
+            <strong id="fileName">＋ &nbsp; Drop your PDF here</strong>
+            <small id="fileHint">or click to upload lesson material</small>
+          </label>
+          <input id="document" name="document" type="file" accept=".pdf,application/pdf">
+
+          <div class="field-label">
+            <label for="prompt">What should students experience?</label>
+            <span id="charCount">0 / 3000</span>
+          </div>
+          <textarea id="prompt" name="prompt" maxlength="3000" required placeholder="e.g. Follow a water molecule from the roots of a plant to its leaves. Show how water moves through the xylem."></textarea>
+
+          <button class="generate" id="generate" type="submit">
+            <span>Generate experience</span>
+            <span class="generate-arrow">↗</span>
+          </button>
+        </form>
+
+        <div class="status-panel">
+          <div class="status-heading">
+            <span class="mono"><span class="status-indicator"></span>Generation status</span>
+            <span class="mono" id="statusCode">IDLE</span>
+          </div>
+          <p id="status" role="status" aria-live="polite">Ready. Your latest experience is available to explore.</p>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="status-foot">
+            <span id="progressLabel">Waiting to start</span>
+            <span>FAL.AI / VIDEO</span>
+          </div>
+        </div>
+      </aside>
+
+      <section class="visual-column" id="preview">
+        <div class="visual-top">
+          <div>
+            <div class="mono" style="color:var(--muted);margin-bottom:6px">02 / Immersive preview</div>
+            <div class="visual-title" id="previewTitle">Latest generated world</div>
+          </div>
+          <div class="visual-meta">360° ENVIRONMENT<br>META QUEST 3 READY</div>
+        </div>
+
+        <div class="preview">
+          <video id="previewVideo" src="/latest-compatible.mp4" muted autoplay loop playsinline preload="auto"></video>
+          <div class="preview-shade"></div>
+          <div class="preview-label">LIVE / 360° PREVIEW</div>
+          <div class="preview-index">IMMERSIVE LEARNING — 01</div>
+          <div class="preview-bottom">
+            <div>
+              <h2 id="previewHeadline">A closer look<br>at another world.</h2>
+              <p id="previewCaption">Your generated experience appears here.</p>
+            </div>
+            <div class="preview-actions">
+              <button class="outline-button" id="playPreview" type="button">Play preview</button>
+              <button class="outline-button" id="openStudent" type="button">Open student view ↗</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="student-strip" id="studentStrip">
+      <div class="student-intro">
+        <div class="mono">03 / Student view</div>
+        <h2>Enter another<br>world.</h2>
+        <p>Students open the shared link on Quest 3 and explore the latest generated lesson.</p>
+      </div>
+      <div class="student-scene">
+        <div class="mono">Immersive environment / 360°</div>
+        <h3>Learning beyond the screen.</h3>
+        <p>The latest generated video is shared with the student viewer.</p>
+      </div>
+      <div class="student-session">
+        <div class="mono">Quest session</div>
+        <div class="session-status" id="questStatus">Waiting for student viewer.</div>
+        <div class="mono">STUDENT LINK</div>
+        <p class="student-link" id="studentLink"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer" id="footer">
+    <span>Immersive Learning Studio</span>
+    <span>Educational worlds / Prototype</span>
+    <span>Designed for exploration ↗</span>
+  </footer>
+
+  <div id="studentOverlay">
+    <div class="student-overlay-copy">
+      <div class="mono">Immersive Learning Studio / Student mode</div>
+      <h1 id="studentTitle">Your next world awaits.</h1>
+      <p id="studentStatus">Waiting for the teacher to generate an experience.</p>
+    </div>
+    <button id="studentEnter" type="button">Enter VR ↗</button>
+  </div>
+
+ 
+
+  <a-scene id="vrScene" renderer="colorManagement: true" vr-mode-ui="enabled: true" background="color: #101716">
+    <a-assets timeout="30000">
+      <video id="vrVideo" src="/latest-compatible.mp4" loop playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
+    </a-assets>
+
+    <a-videosphere id="videoSphere" src="#vrVideo" rotation="0 -90 0"></a-videosphere>
+    <a-camera position="0 0 0">
+      <a-entity id="vrShortcutHintA" position="-0.30 -0.35 -2" text="value: A — Pause / Resume; color: #ffffff; opacity: 0.82; width: 2.8; align: left; wrapCount: 38" scale="0.55 0.55 0.55"></a-entity>
+      <a-entity id="vrShortcutHintB" position="-0.30 -0.47 -2" text="value: B — Exit VR; color: #ffffff; opacity: 0.82; width: 2.8; align: left; wrapCount: 38" scale="0.55 0.55 0.55"></a-entity>
+    </a-camera>
+    <a-entity id="rightController" tracked-controls="hand: right"></a-entity>
+  </a-scene>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const studentMode = params.get("mode") === "student";
+
+    if (studentMode) document.body.classList.add("student-mode");
+
+    const scene = document.getElementById("vrScene");
+    const vrVideo = document.getElementById("vrVideo");
+    const previewVideo = document.getElementById("previewVideo");
+    const status = document.getElementById("status");
+    const statusCode = document.getElementById("statusCode");
+    const progressFill = document.getElementById("progressFill");
+    const progressLabel = document.getElementById("progressLabel");
+    const generateButton = document.getElementById("generate");
+    const form = document.getElementById("generateForm");
+    const promptInput = document.getElementById("prompt");
+    const fileInput = document.getElementById("document");
+    const studentOverlay = document.getElementById("studentOverlay");
+    const studentStatus = document.getElementById("studentStatus");
+    const studentTitle = document.getElementById("studentTitle");
+    const studentEnter = document.getElementById("studentEnter");
+    const rightController = document.getElementById("rightController");
+    const videoSphere = document.getElementById("videoSphere");
+
+    let polling = false;
+    let sawActiveGeneration = false;
+    let lastCompletedAt = null;
+    let lastVideoUrl = null;
+
+    const studentUrl = new URL(window.location.href);
+    studentUrl.search = "?mode=student";
+    studentUrl.hash = "";
+    document.getElementById("studentLink").textContent = studentUrl.href;
+
+    promptInput.addEventListener("input", () => {
+      document.getElementById("charCount").textContent = promptInput.value.length + " / 3000";
+    });
+
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      document.getElementById("fileName").textContent = file ? "✓  " + file.name : "＋  Drop your PDF here";
+      document.getElementById("fileHint").textContent = file ? Math.round(file.size / 1024) + " KB selected" : "or click to upload lesson material";
+    });
+
+    function setStudentGenerating(isGenerating) {
+      if (!studentMode) return;
+      document.body.classList.toggle("generating", isGenerating);
+
+      if (isGenerating) {
+        // Blank screen: hide the previous video while a new one is being generated.
+        vrVideo.pause();
+        videoSphere.setAttribute("visible", false);
+        studentOverlay.classList.add("hidden");
+      } else {
+        videoSphere.setAttribute("visible", true);
+        studentOverlay.classList.remove("hidden");
+      }
+    }
+
+    function setStatus(message, code, progress, running = false) {
+      status.textContent = message || "";
+      statusCode.textContent = code || "IDLE";
+      progressFill.style.width = (progress || 0) + "%";
+      progressFill.classList.toggle("running", running);
+      progressLabel.textContent = running ? "Working on your world" :
+        code === "READY" ? "Ready to explore" :
+        code === "ERROR" ? "Try again" : "Waiting to start";
+
+      if (studentMode) {
+        studentStatus.textContent = message || "Waiting for the teacher.";
+        if (code === "READY") {
+          studentTitle.textContent = "Your world is ready.";
+          studentEnter.textContent = "Enter VR ↗";
+        } else if (running) {
+          studentTitle.textContent = "Building another world.";
+          studentEnter.textContent = "Preparing…";
+        }
+      }
+    }
+
+    function updateVideo(url, completedAt) {
+      if (!url) return;
+
+      const absoluteUrl = new URL(url, window.location.href);
+      absoluteUrl.searchParams.set("sync", Date.now());
+      const finalUrl = absoluteUrl.href;
+
+      if (finalUrl === lastVideoUrl) return;
+      lastVideoUrl = finalUrl;
+      lastCompletedAt = completedAt || lastCompletedAt;
+
+      vrVideo.pause();
+      vrVideo.src = finalUrl;
+      vrVideo.load();
+
+      videoSphere.setAttribute("visible", true);
+      if (studentMode) setStudentGenerating(false);
+
+      previewVideo.pause();
+      previewVideo.src = finalUrl;
+      previewVideo.load();
+      previewVideo.play().catch(() => {});
+
+      document.getElementById("previewTitle").textContent = "Latest generated world";
+      document.getElementById("previewHeadline").innerHTML = "A closer look<br>at another world.";
+      document.getElementById("previewCaption").textContent = "Latest experience / Ready to explore";
+      setStatus("Your new VR world is ready.", "READY", 100, false);
+    }
+
+    vrVideo.addEventListener("loadeddata", () => {
+      const material = videoSphere.components.material && videoSphere.components.material.material;
+      if (material && material.map) material.map.needsUpdate = true;
+    });
+
+    vrVideo.addEventListener("error", () => {
+      if (studentMode) studentStatus.textContent = "The video could not load. Refresh this page and try again.";
+    });
+
+    document.getElementById("playPreview").addEventListener("click", () => {
+      previewVideo.play().catch(() => {});
+    });
+
+    document.getElementById("openStudent").addEventListener("click", () => {
+      window.open(studentUrl.href, "_blank");
+    });
+
+    async function enterVR() {
+      try {
+        await vrVideo.play();
+        await scene.enterVR();
+      } catch (error) {
+        studentStatus.textContent = "Could not start VR. Tap Enter VR again.";
+        console.error("Enter VR failed:", error);
+      }
+    }
+
+    studentEnter.addEventListener("click", enterVR);
+
+    scene.addEventListener("enter-vr", () => {
+      studentOverlay.classList.add("hidden");
+      vrVideo.play().catch(() => {});
+    });
+
+    scene.addEventListener("exit-vr", () => {
+      studentOverlay.classList.remove("hidden");
+      studentStatus.textContent = vrVideo.paused
+        ? "VR closed. Press Enter VR to continue."
+        : "Experience ready. You can re-enter VR.";
+    });
+
+    // Correct Quest Touch controller mapping:
+    // A = Pause / Resume video
+    // B = Exit VR and return to the student screen
+    rightController.addEventListener("buttondown", async (event) => {
+      const id = String(event.detail?.id ?? "").toLowerCase();
+      const isA = ["abutton", "buttona", "4"].includes(id);
+      const isB = ["bbutton", "buttonb", "5"].includes(id);
+
+      if (isA) {
+        if (vrVideo.paused) {
+          try {
+            await vrVideo.play();
+          } catch (error) {
+            console.error("Resume playback failed:", error);
+          }
+        } else {
+          vrVideo.pause();
+        }
+      }
+
+      if (isB && scene.is("vr-mode")) {
+        try {
+          await scene.exitVR();
+        } catch (error) {
+          console.error("Exit VR failed:", error);
+        }
+      }
+    });
+
+    async function pollStatus() {
+      try {
+        const response = await fetch("/api/status", { cache: "no-store" });
+        if (!response.ok) throw new Error("Status unavailable");
+
+        const job = await response.json();
+        const state = String(job.status || "").toLowerCase();
+        const active = [
+          "generating", "processing", "in_progress",
+          "in-progress", "queued", "pending", "submitting"
+        ].includes(state);
+
+        if (active) {
+          sawActiveGeneration = true;
+          setStatus(job.message || "Generating your VR world…", "GENERATING", 55, true);
+          generateButton.querySelector("span").textContent = "Generating experience…";
+          generateButton.disabled = true;
+          setStudentGenerating(true);
+        }
+
+        if (state === "completed" && job.videoUrl) {
+          const changed = job.completedAt && job.completedAt !== lastCompletedAt;
+
+          if (sawActiveGeneration || !lastVideoUrl || changed) {
+            updateVideo(job.videoUrl, job.completedAt);
+            sawActiveGeneration = false;
+          } else if (!studentMode && statusCode.textContent !== "READY") {
+            setStatus(job.message || "Your VR world is ready.", "READY", 100);
+          }
+
+          generateButton.disabled = false;
+          generateButton.querySelector("span").textContent = "Generate experience";
+          polling = false;
+          setStudentGenerating(false);
+        }
+
+        if (state === "error" || state === "failed") {
+          setStatus(job.message || "Generation failed. Please try again.", "ERROR", 0);
+          if (studentMode) studentStatus.textContent = "Generation failed. Ask the teacher to try again.";
+          generateButton.disabled = false;
+          generateButton.querySelector("span").textContent = "Generate experience";
+          polling = false;
+          sawActiveGeneration = false;
+          setStudentGenerating(false);
+        }
+      } catch (error) {
+        console.warn("Status check:", error.message);
+      } finally {
+        setTimeout(pollStatus, 2000);
+      }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const prompt = promptInput.value.trim();
+      if (!prompt) {
+        setStatus("Describe what students should experience first.", "NEEDS PROMPT", 0);
+        return;
+      }
+
+      if (polling) {
+        setStatus("A generation is already running.", "GENERATING", 55, true);
+        return;
+      }
+
+      const file = fileInput.files[0];
+      if (file && file.size > 15 * 1024 * 1024) {
+        setStatus("PDF is too large. Maximum size is 15 MB.", "ERROR", 0);
+        return;
+      }
+
+      const data = new FormData();
+      if (file) data.append("document", file);
+      data.append("prompt", prompt);
+
+      generateButton.disabled = true;
+      generateButton.querySelector("span").textContent = "Generating experience…";
+      polling = true;
+      sawActiveGeneration = true;
+      setStatus("Generating your new experience…", "SUBMITTING", 20, true);
+
+      try {
+        const response = await fetch("/api/generate", { method: "POST", body: data });
+        const result = await response.json();
+
+        if (!response.ok) throw new Error(result.error || "Could not start generation.");
+
+        setStatus(result.message || "Generating your VR world…", "GENERATING", 45, true);
+      } catch (error) {
+        polling = false;
+        generateButton.disabled = false;
+        generateButton.querySelector("span").textContent = "Generate experience";
+        setStatus(error.message, "ERROR", 0);
+        setStudentGenerating(false);
+      }
+    });
+
+    // On the student page, start dark until a current video is confirmed ready.
+    if (studentMode) {
+      setStudentGenerating(true);
+      studentTitle.textContent = "Waiting for your next world.";
+      studentStatus.textContent = "Waiting for the teacher to generate an experience.";
+    }
+
+    pollStatus();
+  </script>
+</body>
+</html>
